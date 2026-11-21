@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ItemDrop Command Builder</title>
+<style>
+:root{--bg:#14110f;--panel:#1e1a17;--line:#3a322b;--txt:#e8dfd3;--mut:#9a8f82;--gold:#c8a15a;--acc:#b8862b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 Segoe UI,system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;color:var(--gold);margin:0 0 4px;letter-spacing:.5px}
+p.sub{margin:0 0 18px;color:var(--mut)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);margin-bottom:5px}
+select,input{width:100%;background:#120f0d;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:8px;font:inherit}
+select:focus,input:focus{outline:2px solid var(--acc);outline-offset:0}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.gems{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.out{font:17px Consolas,monospace;background:#0b0908;border:1px solid var(--acc);border-radius:6px;padding:12px;color:#ffe9b8;word-break:break-all;min-height:48px}
+button{background:var(--acc);color:#1a1208;border:0;border-radius:6px;padding:10px 18px;font:600 15px inherit;cursor:pointer}
+button:hover{filter:brightness(1.1)}
+button.sec{background:#2b241e;color:var(--txt);border:1px solid var(--line)}
+.actions{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.note{color:var(--mut);font-size:13px;margin-top:8px}
+.ok{color:#8fd18f}
+#hist div{font:14px Consolas,monospace;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer}
+#hist div:hover{background:#2b241e}
+</style></head><body><main>
+<h1>ItemDrop Command Builder</h1>
+<p class="sub">Pick an item, set the options, copy the command and paste it into the Diablo II chat (single player).</p>
+
+<div class="card">
+  <div class="row">
+    <div><label for="cat">Category</label><select id="cat"></select></div>
+    <div><label for="find">Search</label><input id="find" placeholder="name or code"></div>
+  </div>
+  <div style="margin-top:12px"><label for="item">Item</label><select id="item" size="8" style="height:auto"></select></div>
+  <div style="margin-top:12px"><label for="custom">Custom item code (overrides the list, e.g. a weapon code)</label><input id="custom" maxlength="4" placeholder="optional, 3-4 characters"></div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <div><label for="q">Quality</label>
+      <select id="q"><option value="normal">Normal</option><option value="low">Low quality</option><option value="super">Superior</option><option value="magic">Magic</option><option value="set">Set</option><option value="rare">Rare</option><option value="unique" selected>Unique</option></select></div>
+    <div><label for="ilvl">Item level (0 = automatic)</label><input id="ilvl" type="number" min="0" max="99" value="0"></div>
+    <div><label for="soc">Sockets (0-6)</label><input id="soc" type="number" min="0" max="6" value="0"></div>
+  </div>
+</div>
+
+<div class="card">
+  <label>Gems / runes (in socket order, max 6)</label>
+  <div class="gems" id="gems"></div>
+  <div class="note">If you pick more gems than sockets, the sockets are raised to match. The game limits sockets to what the base item can hold.</div>
+</div>
+
+<div class="card">
+  <label>Chat command</label>
+  <div class="out" id="out"></div>
+  <div class="actions"><button id="copy">Copy command</button><span id="msg" class="ok"></span><button class="sec" id="reset" style="margin-left:auto">Reset</button></div>
+  <div class="note">Type it in the game chat (Enter), then click or walk once so the game processes it.</div>
+</div>
+
+<div class="card"><label>Recent commands (click to copy)</label><div id="hist"></div></div>
+</main>
+<script>
+const D={
+"Helms":[["cap","Cap"],["skp","Skull Cap"],["hlm","Helm"],["fhl","Full Helm"],["ghm","Great Helm"],["crn","Crown"],["msk","Mask"],["bhm","Bone Helm"],
+ ["xap","War Hat"],["xkp","Sallet"],["xlm","Casque"],["xhl","Basinet"],["xhm","Winged Helm"],["xrn","Grand Crown"],["xsk","Death Mask"],["xh9","Grim Helm"],
+ ["uap","Shako"],["ukp","Hydraskull"],["ulm","Armet"],["uhl","Giant Conch"],["uhm","Spired Helm"],["urn","Corona"],["usk","Demonhead"],["uh9","Bone Visage"]],
+"Body armor":[["qui","Quilted Armor"],["lea","Leather Armor"],["hla","Hard Leather Armor"],["stu","Studded Leather"],["rng","Ring Mail"],["scl","Scale Mail"],["chn","Chain Mail"],["brs","Breast Plate"],["spl","Splint Mail"],["plt","Plate Mail"],["fld","Field Plate"],["gth","Gothic Plate"],["ful","Full Plate Mail"],["aar","Ancient Armor"],["ltp","Light Plate"],
+ ["xui","Ghost Armor"],["xea","Serpentskin Armor"],["xla","Demonhide Armor"],["xtu","Trellised Armor"],["xng","Linked Mail"],["xcl","Tigulated Mail"],["xhn","Mesh Armor"],["xrs","Cuirass"],["xpl","Russet Armor"],["xlt","Templar Coat"],["xld","Sharktooth Armor"],["xth","Embossed Plate"],["xul","Chaos Armor"],["xar","Ornate Plate"],["xtp","Mage Plate"],
+ ["uui","Dusk Shroud"],["uea","Wyrmhide"],["ula","Scarab Husk"],["utu","Wire Fleece"],["ung","Diamond Mail"],["ucl","Loricated Mail"],["uhn","Boneweave"],["urs","Great Hauberk"],["upl","Balrog Skin"],["ult","Hellforged Plate"],["uld","Kraken Shell"],["uth","Lacquered Plate"],["uul","Shadow Plate"],["uar","Sacred Armor"],["utp","Archon Plate"]],
+"Shields":[["buc","Buckler"],["sml","Small Shield"],["lrg","Large Shield"],["kit","Kite Shield"],["tow","Tower Shield"],["gts","Gothic Shield"],["bsh","Bone Shield"],["spk","Spiked Shield"],
+ ["xuc","Defender"],["xml","Round Shield"],["xrg","Scutum"],["xit","Dragon Shield"],["xow","Pavise"],["xts","Ancient Shield"],["xsh","Grim Shield"],["xpk","Barbed Shield"],
+ ["uuc","Heater"],["uml","Luna"],["urg","Hyperion"],["uit","Monarch"],["uow","Aegis"],["uts","Ward"],["ush","Troll Nest"],["upk","Blade Barrier"]],
+"Gloves":[["lgl","Leather Gloves"],["vgl","Heavy Gloves"],["mgl","Chain Gloves"],["tgl","Light Gauntlets"],["hgl","Gauntlets"],
+ ["xlg","Demonhide Gloves"],["xvg","Sharkskin Gloves"],["xmg","Heavy Bracers"],["xtg","Battle Gauntlets"],["xhg","War Gauntlets"],
+ ["ulg","Bramble Mitts"],["uvg","Vampirebone Gloves"],["umg","Vambraces"],["utg","Crusader Gauntlets"],["uhg","Ogre Gauntlets"]],
+"Boots":[["lbt","Leather Boots"],["vbt","Heavy Boots"],["mbt","Chain Boots"],["tbt","Light Plated Boots"],["hbt","Greaves"],
+ ["xlb","Demonhide Boots"],["xvb","Sharkskin Boots"],["xmb","Mesh Boots"],["xtb","Battle Boots"],["xhb","War Boots"],
+ ["ulb","Wirefleece Boots"],["uvb","Scarabshell Boots"],["umb","Boneweave Boots"],["utb","Mirrored Boots"],["uhb","Myrmidon Greaves"]],
+"Belts":[["lbl","Sash"],["vbl","Light Belt"],["mbl","Belt"],["tbl","Heavy Belt"],["hbl","Plated Belt"],
+ ["zlb","Demonhide Sash"],["zvb","Sharkskin Belt"],["zmb","Mesh Belt"],["ztb","Battle Belt"],["zhb","War Belt"],
+ ["ulc","Spiderweb Sash"],["uvc","Vampirefang Belt"],["umc","Mithril Coil"],["utc","Troll Belt"],["uhc","Colossus Girdle"]],
+"Jewelry & charms":[["rin","Ring"],["amu","Amulet"],["jew","Jewel"],["cm1","Small Charm"],["cm2","Large Charm"],["cm3","Grand Charm"]]
+};
+const GEMS=[["Chipped Amethyst","gcv"],["Flawed Amethyst","gfv"],["Amethyst","gsv"],["Flawless Amethyst","gzv"],["Perfect Amethyst","gpv"],
+["Chipped Topaz","gcy"],["Flawed Topaz","gfy"],["Topaz","gsy"],["Flawless Topaz","gly"],["Perfect Topaz","gpy"],
+["Chipped Sapphire","gcb"],["Flawed Sapphire","gfb"],["Sapphire","gsb"],["Flawless Sapphire","glb"],["Perfect Sapphire","gpb"],
+["Chipped Emerald","gcg"],["Flawed Emerald","gfg"],["Emerald","gsg"],["Flawless Emerald","glg"],["Perfect Emerald","gpg"],
+["Chipped Ruby","gcr"],["Flawed Ruby","gfr"],["Ruby","gsr"],["Flawless Ruby","glr"],["Perfect Ruby","gpr"],
+["Chipped Diamond","gcw"],["Flawed Diamond","gfw"],["Diamond","gsw"],["Flawless Diamond","glw"],["Perfect Diamond","gpw"],
+["Chipped Skull","skc"],["Flawed Skull","skf"],["Skull","sku"],["Flawless Skull","skl"],["Perfect Skull","skz"]];
+const RUNES="El Eld Tir Nef Eth Ith Tal Ral Ort Thul Amn Sol Shael Dol Hel Io Lum Ko Fal Lem Pul Um Mal Ist Gul Vex Ohm Lo Sur Ber Jah Cham Zod".split(" ")
+ .map((n,i)=>[(i+1)+" "+n,"r"+String(i+1).padStart(2,"0")]);
+const $=id=>document.getElementById(id);
+const cat=$("cat"),item=$("item"),find=$("find"),custom=$("custom"),q=$("q"),ilvl=$("ilvl"),soc=$("soc"),out=$("out"),msg=$("msg");
+Object.keys(D).forEach(k=>cat.add(new Option(k,k)));
+function fillItems(){
+  const f=find.value.trim().toLowerCase(),prev=item.value;item.innerHTML="";
+  const src=f?[].concat(...Object.values(D)):D[cat.value];
+  src.filter(x=>!f||x[0].includes(f)||x[1].toLowerCase().includes(f)).forEach(x=>item.add(new Option(x[1]+"  ("+x[0]+")",x[0])));
+  const o=[...item.options].find(o=>o.value===prev);if(o)o.selected=true;else if(item.options.length)item.selectedIndex=0;
+  build();
+}
+const gemSel=[];
+for(let i=0;i<6;i++){
+  const w=document.createElement("div"),s=document.createElement("select");
+  w.innerHTML="<label>Socket "+(i+1)+"</label>";
+  s.add(new Option("— empty —",""));
+  [["Runes",RUNES],["Gems",GEMS]].forEach(([g,list])=>{const og=document.createElement("optgroup");og.label=g;
+    list.forEach(x=>og.appendChild(new Option(x[0]+"  ("+x[1]+")",x[1])));s.appendChild(og);});
+  s.onchange=build;w.appendChild(s);$("gems").appendChild(w);gemSel.push(s);
+}
+function clamp(v,a,b){v=parseInt(v,10);if(isNaN(v))v=a;return Math.max(a,Math.min(b,v));}
+function build(){
+  const code=(custom.value.trim()||item.value||"").toLowerCase();
+  const gems=gemSel.map(s=>s.value).filter(Boolean);
+  let sk=clamp(soc.value,0,6),lv=clamp(ilvl.value,0,99);
+  if(gems.length>sk)sk=gems.length;
+  const p=[".item",code,q.value];
+  if(gems.length||sk>0||lv>0){p.push(lv);}
+  if(gems.length||sk>0){p.push(sk);}
+  gems.forEach(g=>p.push(g));
+  out.textContent=code?p.join(" "):"Select an item first";
+  return out.textContent;
+}
+function copyText(t){
+  const fallback=()=>{const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(e){}a.remove();};
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).catch(fallback);else fallback();
+}
+const hist=[];
+function addHist(t){const i=hist.indexOf(t);if(i>=0)hist.splice(i,1);hist.unshift(t);if(hist.length>10)hist.pop();
+  $("hist").innerHTML="";hist.forEach(h=>{const d=document.createElement("div");d.textContent=h;d.onclick=()=>{copyText(h);flash()};$("hist").appendChild(d);});}
+function flash(){msg.textContent="Copied!";setTimeout(()=>msg.textContent="",1500);}
+$("copy").onclick=()=>{const t=build();if(t.startsWith(".item")){copyText(t);addHist(t);flash();}};
+$("reset").onclick=()=>{custom.value="";find.value="";q.value="unique";ilvl.value=0;soc.value=0;gemSel.forEach(s=>s.value="");fillItems();};
+[cat,custom,q,ilvl,soc].forEach(e=>e.addEventListener("input",build));
+item.onchange=build;cat.onchange=()=>{find.value="";fillItems()};find.oninput=fillItems;
+fillItems();
+setInterval(()=>fetch("/ping").catch(()=>{}),2000);fetch("/ping").catch(()=>{});
+</script></body></html>
